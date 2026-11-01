@@ -1,5 +1,6 @@
 import os
 import json
+import inspect
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import classification_report, f1_score, recall_score, precision_score, accuracy_score, roc_auc_score
@@ -51,7 +52,7 @@ def train_production_model():
         with open(params_path, "r") as f:
             prod_params = json.load(f)
         print(f"Successfully loaded optimized parameters from Dev: {prod_params}")
-    else:
+    else: 
         # Define default baseline parameters if parameters map file is missing
         prod_params = {
             'max_depth': 7,
@@ -112,8 +113,18 @@ def train_production_model():
         mlflow.log_metric("test_precision", test_prec)
         mlflow.log_metric("test_recall", test_recall)
 
-        # --- Log Model Artifact to MLflow Run ---
-        mlflow.sklearn.log_model(model, "model")
+        # --- Dynamic Log Model Parameter Check ---
+        # Check if the environment's mlflow.sklearn.log_model accepts 'skops_trusted_types'
+        sig = inspect.signature(mlflow.sklearn.log_model)
+        if 'skops_trusted_types' in sig.parameters:
+            mlflow.sklearn.log_model(
+                model,
+                "model",
+                skops_trusted_types=['xgboost.core.Booster', 'xgboost.sklearn.XGBClassifier']
+            )
+        else:
+            # Fallback for older MLflow versions that do not support or require skops constraints
+            mlflow.sklearn.log_model(model, "model")
 
         # --- Save Serialized Model Locally for App Deployments ---
         deployment_dir = "tourism_project/deployment"
