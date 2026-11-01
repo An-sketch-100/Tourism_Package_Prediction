@@ -59,7 +59,7 @@ def clean_and_prepare_data():
 
     # Fill missing values dynamically: numerical with median, categorical with mode
     for col in df.columns:
-        if np.issubdtype(df[col].dtype, np.number):
+        if pd.api.types.is_numeric_dtype(df[col]):
             df[col] = df[col].fillna(df[col].median())
         else:
             df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "Unknown")
@@ -78,7 +78,7 @@ def clean_and_prepare_data():
     )
 
     # Create a Column Transformer to handle one-hot encoding for object/string categories
-    categorical_features = X.select_dtypes(include=['object', 'string']).columns.tolist()
+    categorical_features = X.select_dtypes(include=['object', 'string', 'category']).columns.tolist()
     preprocessor = make_column_transformer(
         (OneHotEncoder(handle_unknown="ignore", drop="first", sparse_output=False), categorical_features),
         remainder="passthrough"
